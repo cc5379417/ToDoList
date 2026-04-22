@@ -1,9 +1,8 @@
-# השתמש ב-SDK של .NET 8 לבנייה
+# שלב 1: בנייה
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# העתקת קובץ הפרויקט והרצת Restore
-# כיוון שאנחנו בתוך ToDoApi, הקובץ נמצא ממש כאן
+# העתקת קובץ הפרויקט - רנדר כבר נמצא בתוך ToDoApi ולכן הקובץ כאן
 COPY ToDoApi.csproj .
 RUN dotnet restore
 
@@ -11,12 +10,12 @@ RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/out
 
-# יצירת תמונת ההרצה (Runtime)
+# שלב 2: הרצה
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
-# הגדרת פורט 80 (סטנדרט של Render)
+# הגדרת פורט ל-Render
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
