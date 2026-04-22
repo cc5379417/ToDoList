@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 1. Config Defaults - כתובת בסיס
-axios.defaults.baseURL = "http://localhost:5001";
+axios.defaults.baseURL = "https://todoapi-7m69.onrender.com"
 
 const apiUrl = "/api/todoitems";
 

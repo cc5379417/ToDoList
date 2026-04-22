@@ -41,8 +41,26 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 builder.Services.AddAuthorization();
+// 1. הגדרת הפוליסה (לפני ה-var app = builder.Build();)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
 
 var app = builder.Build();
+
+// 2. הפעלת ה-CORS (חייב להיות אחרי Build ולפני MapControllers)
+app.UseCors("AllowAll");
+
+app.UseAuthorization();
+// ... שאר הקוד
+
 
 // Swagger
 app.UseSwagger();
