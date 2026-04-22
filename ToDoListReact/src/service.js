@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// 1. Config Defaults - כתובת בסיס
-axios.defaults.baseURL = "https://todoapi-7m69.onrender.com"
+// 1. Config Defaults - כתובת בסיס לשרת ב-Render
+axios.defaults.baseURL = "https://todoapi-7m69.onrender.com";
 
 const apiUrl = "/api/todoitems";
 
@@ -12,14 +12,14 @@ axios.interceptors.request.use(config => {
     return config;
 });
 
-// interceptor - תופס שגיאות ורושם ללוג + מעביר 401 ללוגין
+// interceptor - טיפול בשגיאות
 axios.interceptors.response.use(
     response => response,
     error => {
         console.log('Error:', error.response?.status, error.message);
         if (error.response?.status === 401) {
-            localStorage.removeItem('token'); // מחק token ישן
-            window.location.reload(); // טען מחדש - יציג לוגין
+            localStorage.removeItem('token');
+            window.location.reload(); 
         }
         return Promise.reject(error);
     }
@@ -36,9 +36,24 @@ export const authService = {
     logout: () => localStorage.removeItem('token')
 };
 
-export default {
-    getTasks: async () => (await axios.get(apiUrl)).data,
-    addTask: async (name) => (await axios.post(apiUrl, { name, isComplete: false })).data,
-    setCompleted: async (id, isComplete) => (await axios.put(`${apiUrl}/${id}`, { id, name: "", isComplete })).data,
-    deleteTask: async (id) => (await axios.delete(`${apiUrl}/${id}`)).data
+const todoService = {
+    getTasks: async () => {
+        const result = await axios.get(apiUrl);
+        return result.data;
+    },
+    addTask: async (name) => {
+        const result = await axios.post(apiUrl, { name, isComplete: false });
+        return result.data;
+    },
+    // עדכון: שולחים את האובייקט המלא כדי לא לדרוס את השם ב-DB
+    setCompleted: async (id, name, isComplete) => {
+        const result = await axios.put(`${apiUrl}/${id}`, { id, name, isComplete });
+        return result.data;
+    },
+    deleteTask: async (id) => {
+        const result = await axios.delete(`${apiUrl}/${id}`);
+        return result.data;
+    }
 };
+
+export default todoService;
