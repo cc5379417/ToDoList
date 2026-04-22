@@ -5,15 +5,15 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# מעתיקים את הכל (כיוון ש-Render כבר יהיה בתוך תיקיית ToDoApi)
+# מעתיקים את כל תוכן התיקייה הנוכחית (ToDoApi) לתוך /src בתוך ה-Container
 COPY . .
 
-# בנייה ופרסום
+# הרצת ה-Restore תתבצע על הקובץ שנמצא בתיקיית השורש הנוכחית
 RUN dotnet restore
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
