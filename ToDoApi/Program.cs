@@ -6,16 +6,16 @@ using ToDoApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// חיבור ל-DB
+// 1. חיבור ל-DB
 builder.Services.AddDbContext<ToDoDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("ToDoDB"),
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("ToDoDB"))));
 
-// Swagger
+// 2. Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS
+// 3. הגדרת CORS (פעם אחת בלבד!)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -26,7 +26,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// JWT Authentication
+// 4. הגדרת JWT Authentication
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
@@ -40,42 +40,26 @@ builder.Services.AddAuthentication("Bearer")
                 Encoding.UTF8.GetBytes("supersecretkey123456789012345678"))
         };
     });
+
 builder.Services.AddAuthorization();
-// 1. הגדרת הפוליסה (לפני ה-var app = builder.Build();)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
-});
 
 var app = builder.Build();
 
-// 2. הפעלת ה-CORS (חייב להיות אחרי Build ולפני MapControllers)
-app.UseCors("AllowAll");
+// ----- סדר ה-Middleware (חשוב מאוד!) -----
 
-app.UseAuthorization();
-// ... שאר הקוד
+// תמיד ראשון כדי שכל הבקשות יאושרו
+app.UseCors("AllowAll"); 
 
-
-// Swagger
+// Swagger תמיד זמין ב-Development (או בכלל ב-Render לבדיקות)
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// CORS
-app.UseCors("AllowAll");
-
-// Authentication & Authorization
-app.UseAuthentication();
+// אימות חייב לבוא לפני הרשאות
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 // ===== Auth Routes =====
 
-// רישום
 app.MapPost("/api/auth/register", async (User user, ToDoDbContext db) =>
 {
     db.Users.Add(user);
@@ -83,7 +67,6 @@ app.MapPost("/api/auth/register", async (User user, ToDoDbContext db) =>
     return Results.Ok();
 });
 
-// לוגין
 app.MapPost("/api/auth/login", async (User loginUser, ToDoDbContext db) =>
 {
     var user = await db.Users.FirstOrDefaultAsync(u =>
@@ -103,11 +86,9 @@ app.MapPost("/api/auth/login", async (User loginUser, ToDoDbContext db) =>
 
 // ===== ToDo Routes =====
 
-// שליפת כל המשימות
 app.MapGet("/api/todoitems", async (ToDoDbContext db) =>
     await db.Todoitems.ToListAsync()).RequireAuthorization();
 
-// הוספת משימה
 app.MapPost("/api/todoitems", async (Todoitem item, ToDoDbContext db) =>
 {
     db.Todoitems.Add(item);
@@ -115,7 +96,6 @@ app.MapPost("/api/todoitems", async (Todoitem item, ToDoDbContext db) =>
     return Results.Ok(item);
 }).RequireAuthorization();
 
-// עדכון משימה
 app.MapPut("/api/todoitems/{id}", async (int id, Todoitem updatedItem, ToDoDbContext db) =>
 {
     var item = await db.Todoitems.FindAsync(id);
@@ -126,7 +106,6 @@ app.MapPut("/api/todoitems/{id}", async (int id, Todoitem updatedItem, ToDoDbCon
     return Results.Ok(item);
 }).RequireAuthorization();
 
-// מחיקת משימה
 app.MapDelete("/api/todoitems/{id}", async (int id, ToDoDbContext db) =>
 {
     var item = await db.Todoitems.FindAsync(id);
