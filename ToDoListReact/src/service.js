@@ -1,24 +1,22 @@
 import axios from 'axios';
 
-// 1. Config Defaults - כתובת בסיס לשרת ב-Render
+// כתובת בסיס דינמית
 axios.defaults.baseURL = window.location.hostname === "localhost" 
-    ? "http://localhost:5001"  // אם את מריצה במחשב
-    : "https://todoapi-7m69.onrender.com"; // אם זה האתר המרוחק
+    ? "http://localhost:5001" 
+    : "https://todoapi-7m69.onrender.com";
 
 const apiUrl = "/api/todoitems";
 
-// interceptor - שולח token בכל בקשה
+// Interceptors (נשארים אותו דבר)
 axios.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
-// interceptor - טיפול בשגיאות
 axios.interceptors.response.use(
     response => response,
     error => {
-        console.log('Error:', error.response?.status, error.message);
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             window.location.reload(); 
@@ -27,7 +25,8 @@ axios.interceptors.response.use(
     }
 );
 
-export const authService = {
+// הגדרת authService (בלי המילה export בהתחלה!)
+const authService = {
     register: async (username, password) => {
         await axios.post('/api/auth/register', { username, password });
     },
@@ -38,6 +37,7 @@ export const authService = {
     logout: () => localStorage.removeItem('token')
 };
 
+// הגדרת todoService
 const todoService = {
     getTasks: async () => {
         const result = await axios.get(apiUrl);
@@ -47,15 +47,19 @@ const todoService = {
         const result = await axios.post(apiUrl, { name, isComplete: false });
         return result.data;
     },
-    // עדכון: שולחים את האובייקט המלא כדי לא לדרוס את השם ב-DB
     setCompleted: async (id, name, isComplete) => {
-        const result = await axios.put(`${apiUrl}/${id}`, { id, name, isComplete });
-        return result.data;
-    },
+    const result = await axios.put(`${apiUrl}/${id}`, { 
+        id: id, 
+        name: name, // חשוב מאוד שהשם לא יהיה ריק
+        isComplete: isComplete 
+    });
+    return result.data;
+},
     deleteTask: async (id) => {
         const result = await axios.delete(`${apiUrl}/${id}`);
         return result.data;
     }
 };
 
-export default todoService;
+// ייצוא יחיד ומסודר של שניהם
+export { todoService, authService };

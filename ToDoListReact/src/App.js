@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import service from './service.js';
+import { todoService as service } from './service';
 import Login from './Login';
 import Register from './Register';
 
