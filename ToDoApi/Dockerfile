@@ -1,21 +1,23 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-WORKDIR /app
-EXPOSE 80
-
+# השתמש ב-SDK של .NET 8 לבנייה
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# מעתיקים את כל תוכן התיקייה הנוכחית (ToDoApi) לתוך /src בתוך ה-Container
-COPY . .
-
-# הרצת ה-Restore תתבצע על הקובץ שנמצא בתיקיית השורש הנוכחית
+# העתקת קובץ הפרויקט והרצת Restore
+# כיוון שאנחנו בתוך ToDoApi, הקובץ נמצא ממש כאן
+COPY ToDoApi.csproj .
 RUN dotnet restore
-RUN dotnet build -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+# העתקת שאר הקבצים ובנייה
+COPY . .
+RUN dotnet publish -c Release -o /app/out
 
-FROM base AS final
+# יצירת תמונת ההרצה (Runtime)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/out .
+
+# הגדרת פורט 80 (סטנדרט של Render)
+ENV ASPNETCORE_URLS=http://+:80
+EXPOSE 80
+
 ENTRYPOINT ["dotnet", "ToDoApi.dll"]
