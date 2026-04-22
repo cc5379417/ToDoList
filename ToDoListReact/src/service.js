@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // 1. Config Defaults - כתובת בסיס לשרת ב-Render
-axios.defaults.baseURL = "https://todoapi-7m69.onrender.com";
+axios.defaults.baseURL = window.location.hostname === "localhost" 
+    ? "http://localhost:5000"  // אם את מריצה במחשב
+    : "https://todoapi-7m69.onrender.com"; // אם זה האתר המרוחק
 
 const apiUrl = "/api/todoitems";
 
