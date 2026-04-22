@@ -20,9 +20,17 @@ function App() {
     await getTodos();
   }
 
-  async function updateCompleted(todo, isComplete) {
-    await service.setCompleted(todo.id, isComplete);
-    await getTodos();
+ async function updateCompleted(todo, isComplete) {
+    try {
+      console.log("Updating todo:", todo.id, todo.name, isComplete);
+      
+      // כאן הייתה השגיאה: השתמשת ב-todoService במקום ב-service
+      await service.setCompleted(todo.id, todo.name, isComplete); 
+      
+      await getTodos(); 
+    } catch (error) {
+      console.error("Update failed:", error);
+    }
   }
 
   async function deleteTodo(id) {

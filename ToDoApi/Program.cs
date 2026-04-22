@@ -96,16 +96,23 @@ app.MapPost("/api/todoitems", async (Todoitem item, ToDoDbContext db) =>
     return Results.Ok(item);
 }).RequireAuthorization();
 
+// עדכון משימה - גרסה גמישה
 app.MapPut("/api/todoitems/{id}", async (int id, Todoitem updatedItem, ToDoDbContext db) =>
 {
     var item = await db.Todoitems.FindAsync(id);
     if (item == null) return Results.NotFound();
-    item.Name = updatedItem.Name;
+
+    // אם קיבלנו שם חדש - נעדכן, אם לא - נשאיר את הקיים
+    if (!string.IsNullOrEmpty(updatedItem.Name))
+    {
+        item.Name = updatedItem.Name;
+    }
+    
     item.IsComplete = updatedItem.IsComplete;
+
     await db.SaveChangesAsync();
     return Results.Ok(item);
 }).RequireAuthorization();
-
 app.MapDelete("/api/todoitems/{id}", async (int id, ToDoDbContext db) =>
 {
     var item = await db.Todoitems.FindAsync(id);

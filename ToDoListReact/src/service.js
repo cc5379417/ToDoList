@@ -47,11 +47,12 @@ const todoService = {
         const result = await axios.post(apiUrl, { name, isComplete: false });
         return result.data;
     },
-    setCompleted: async (id, name, isComplete) => {
+   setCompleted: async (id, name, isComplete) => {
+    // שלחי את האובייקט עם אותיות גדולות בדיוק כמו ב-C#
     const result = await axios.put(`${apiUrl}/${id}`, { 
-        id: id, 
-        name: name, // חשוב מאוד שהשם לא יהיה ריק
-        isComplete: isComplete 
+        Id: id, 
+        Name: name, 
+        IsComplete: isComplete 
     });
     return result.data;
 },
