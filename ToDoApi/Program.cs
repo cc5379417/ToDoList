@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using ToDoApi;
 
@@ -11,22 +12,19 @@ builder.Services.AddDbContext<ToDoDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("ToDoDB"),
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("ToDoDB"))));
 
-// 2. Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// 3. הגדרת CORS (פעם אחת בלבד!)
+// 2. הגדרת CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
 
-// 4. הגדרת JWT Authentication
+// 3. הגדרת JWT Authentication
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
@@ -45,16 +43,9 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// ----- סדר ה-Middleware (חשוב מאוד!) -----
-
-// תמיד ראשון כדי שכל הבקשות יאושרו
 app.UseCors("AllowAll"); 
-
-// Swagger תמיד זמין ב-Development (או בכלל ב-Render לבדיקות)
 app.UseSwagger();
 app.UseSwaggerUI();
-
-// אימות חייב לבוא לפני הרשאות
 app.UseAuthentication(); 
 app.UseAuthorization();
 
@@ -69,54 +60,79 @@ app.MapPost("/api/auth/register", async (User user, ToDoDbContext db) =>
 
 app.MapPost("/api/auth/login", async (User loginUser, ToDoDbContext db) =>
 {
-    var user = await db.Users.FirstOrDefaultAsync(u =>
+    var user = await db.Users.FirstOrDefaultAsync(u => 
         u.Username == loginUser.Username && u.Password == loginUser.Password);
 
     if (user == null) return Results.Unauthorized();
 
+    var claims = new[]
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.Username ?? "")
+    };
+
     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("supersecretkey123456789012345678"));
     var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-    var token = new JwtSecurityToken(
-        expires: DateTime.Now.AddHours(1),
-        signingCredentials: creds);
-    var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-    return Results.Ok(new { token = tokenString });
+    var token = new JwtSecurityToken(
+        issuer: "your-app",
+        audience: "your-app",
+        claims: claims,
+        expires: DateTime.Now.AddHours(3),
+        signingCredentials: creds
+    );
+
+    return Results.Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
 });
 
 // ===== ToDo Routes =====
 
-app.MapGet("/api/todoitems", async (ToDoDbContext db) =>
-    await db.Todoitems.ToListAsync()).RequireAuthorization();
-
-app.MapPost("/api/todoitems", async (Todoitem item, ToDoDbContext db) =>
+app.MapGet("/api/todoitems", async (ClaimsPrincipal user, ToDoDbContext db) =>
 {
+    var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (userIdStr == null) return Results.Unauthorized();
+    int userId = int.Parse(userIdStr);
+
+    var items = await db.Todoitems.Where(t => t.UserId == userId).ToListAsync();
+    return Results.Ok(items);
+}).RequireAuthorization();
+
+app.MapPost("/api/todoitems", async (ClaimsPrincipal user, ToDoDbContext db, Todoitem item) =>
+{
+    var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (userIdStr == null) return Results.Unauthorized();
+    
+    item.UserId = int.Parse(userIdStr);
     db.Todoitems.Add(item);
     await db.SaveChangesAsync();
     return Results.Ok(item);
 }).RequireAuthorization();
 
-// עדכון משימה - גרסה גמישה
-app.MapPut("/api/todoitems/{id}", async (int id, Todoitem updatedItem, ToDoDbContext db) =>
+app.MapPut("/api/todoitems/{id}", async (int id, ClaimsPrincipal user, ToDoDbContext db, Todoitem updatedItem) =>
 {
-    var item = await db.Todoitems.FindAsync(id);
+    var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (userIdStr == null) return Results.Unauthorized();
+    int userId = int.Parse(userIdStr);
+
+    var item = await db.Todoitems.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
     if (item == null) return Results.NotFound();
 
-    // אם קיבלנו שם חדש - נעדכן, אם לא - נשאיר את הקיים
-    if (!string.IsNullOrEmpty(updatedItem.Name))
-    {
-        item.Name = updatedItem.Name;
-    }
-    
+    if (!string.IsNullOrEmpty(updatedItem.Name)) item.Name = updatedItem.Name;
     item.IsComplete = updatedItem.IsComplete;
 
     await db.SaveChangesAsync();
     return Results.Ok(item);
 }).RequireAuthorization();
-app.MapDelete("/api/todoitems/{id}", async (int id, ToDoDbContext db) =>
+
+app.MapDelete("/api/todoitems/{id}", async (int id, ClaimsPrincipal user, ToDoDbContext db) =>
 {
-    var item = await db.Todoitems.FindAsync(id);
+    var userIdStr = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (userIdStr == null) return Results.Unauthorized();
+    int userId = int.Parse(userIdStr);
+
+    var item = await db.Todoitems.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
     if (item == null) return Results.NotFound();
+    
     db.Todoitems.Remove(item);
     await db.SaveChangesAsync();
     return Results.NoContent();
