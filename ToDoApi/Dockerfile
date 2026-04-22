@@ -1,23 +1,21 @@
-# שלב 1: בנייה (Build)
+# שלב הבנייה
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
-WORKDIR /src
+WORKDIR /app
 
-# העתקת קובץ הפרויקט וביצוע Restore
-COPY ToDoApi/ToDoApi.csproj ToDoApi/
-RUN dotnet restore "ToDoApi/ToDoApi.csproj"
+# העתקת קובץ הפרויקט (אנחנו כבר בתוך תיקיית ToDoApi לפי הגדרות Render)
+COPY ToDoApi.csproj ./
+RUN dotnet restore
 
-# העתקת כל שאר הקבצים ובנייה
-COPY . .
-WORKDIR "/src/ToDoApi"
-RUN dotnet publish "ToDoApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# העתקת כל השאר ובנייה
+COPY . ./
+RUN dotnet publish -c Release -o out
 
-# שלב 2: הרצה (Runtime)
+# שלב ההרצה
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-# העתקה מהשלב הקודם (build-env)
-COPY --from=build-env /app/publish .
+COPY --from=build-env /app/out .
 
-# הגדרות פורט עבור Render
+# הגדרת פורט
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
