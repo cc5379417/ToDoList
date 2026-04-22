@@ -1,22 +1,21 @@
-# שלב 1: בנייה
+# שלב הבנייה
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# העתקת קובץ הפרויקט - רנדר כבר נמצא בתוך ToDoApi ולכן הקובץ כאן
-COPY ToDoApi.csproj .
-RUN dotnet restore
+# העתקה של קובץ הפרויקט מהתיקייה הספציפית
+COPY ToDoApi/ToDoApi.csproj ToDoApi/
+RUN dotnet restore "ToDoApi/ToDoApi.csproj"
 
-# העתקת שאר הקבצים ובנייה
+# העתקה של שאר הקבצים
 COPY . .
-RUN dotnet publish -c Release -o /app/out
+WORKDIR "/src/ToDoApi"
+RUN dotnet build "ToDoApi.csproj" -c Release -o /app/build
 
-# שלב 2: הרצה
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM build AS publish
+RUN dotnet publish "ToDoApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# שלב ההרצה
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-COPY --from=build /app/out .
-
-# הגדרת פורט ל-Render
-ENV ASPNETCORE_URLS=http://+:80
-EXPOSE 80
-
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ToDoApi.dll"]
