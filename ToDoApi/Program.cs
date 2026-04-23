@@ -18,9 +18,11 @@ builder.Services.AddSwaggerGen();
 // 2. הגדרת CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        policy.WithOrigins("https://todolist-umei.onrender.com") // הכתובת של ה-Frontend
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
