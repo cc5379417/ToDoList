@@ -43,6 +43,15 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000") // הכתובת של ה-React
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
 
 app.UseCors();
@@ -50,7 +59,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication(); 
 app.UseAuthorization();
-
+app.UseCors();
 // ===== Auth Routes =====
 
 app.MapPost("/api/auth/register", async (User user, ToDoDbContext db) =>
